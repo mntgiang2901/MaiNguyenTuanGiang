@@ -1,0 +1,125 @@
+1.  This code block uses:
+    a. ReactJS with TypeScript
+
+2.Your provided code has several issues and areas for improvement. Let's address them step-by-step:
+
+Issues and Improvements
+
+    1. Type Safety and Interfaces:
+        - The 'WalletBalance' interface is missing a 'blockchain' property, which is necessary for sorting balances.
+        - The 'FormattedWalletBalance' interface is used but not defined in your sorting logic, which might cause confusion.
+        - Define the missing types and ensure all types are properly used.
+
+
+    2. Logic in 'useMemo':
+        - The filtering logic inside 'useMemo' is not correctly structured. The variables 'lhsPriority' and 'balancePriority' are used incorrectly.
+        - Fix the logic to ensure correct filtering and sorting.
+
+
+    3. Currency Formatting:
+        - The 'toFixed' method in formattedBalances mapping might not be correctly used. Consider providing a more robust formatting.
+
+
+    4. Component Rendering:
+        - Ensure 'WalletRow' component is correctly used with proper props.
+        - Enhance readability by structuring the rendering logic more clearly.
+
+    5. Dependency Arrays:
+        - Make sure the dependency arrays in 'useMemo' and other hooks are accurate to prevent unnecessary re-renders.
+
+Refactored Code
+Here's the refactored code with explanations for each change:
+
+----------------------------------------------------------------
+interface WalletBalance {
+  currency: string;
+  amount: number;
+  blockchain: string; // Added the missing blockchain property
+}
+
+interface FormattedWalletBalance extends WalletBalance {
+  formatted: string;
+}
+
+interface Props extends BoxProps {}
+
+const WalletPage: React.FC<Props> = (props: Props) => {
+  const { children, ...rest } = props;
+  const balances = useWalletBalances();
+  const prices = usePrices();
+
+  const getPriority = (blockchain: string): number => {
+    switch (blockchain) {
+      case 'Osmosis':
+        return 100;
+      case 'Ethereum':
+        return 50;
+      case 'Arbitrum':
+        return 30;
+      case 'Zilliqa':
+      case 'Neo':
+        return 20;
+      default:
+        return -99;
+    }
+  };
+
+  const sortedBalances = useMemo(() => {
+    return balances
+      .filter((balance: WalletBalance) => {
+        const balancePriority = getPriority(balance.blockchain);
+        return balancePriority > -99 && balance.amount > 0;
+      })
+      .sort((lhs: WalletBalance, rhs: WalletBalance) => {
+        const leftPriority = getPriority(lhs.blockchain);
+        const rightPriority = getPriority(rhs.blockchain);
+        return rightPriority - leftPriority;
+      });
+  }, [balances]);
+
+  const formattedBalances = sortedBalances.map((balance: WalletBalance) => {
+    return {
+      ...balance,
+      formatted: balance.amount.toFixed(2) // Format with two decimal places for better readability
+    };
+  });
+
+  const rows = formattedBalances.map((balance: FormattedWalletBalance, index: number) => {
+    const usdValue = prices[balance.currency] * balance.amount;
+    return (
+      <WalletRow 
+        className={classes.row}
+        key={index}
+        amount={balance.amount}
+        usdValue={usdValue}
+        formattedAmount={balance.formatted}
+      />
+    );
+  });
+
+  return (
+    <div {...rest}>
+      {rows}
+    </div>
+  );
+};
+----------------------------------------------------------------
+
+Explanation of Changes
+
+    1. Type Safety:
+        Added 'blockchain' property to 'WalletBalance' and extended 'FormattedWalletBalance' with it.
+
+    2. Filtering and Sorting Logic:
+        Corrected the logic in 'useMemo' to filter out balances with priorities greater than -99 and amounts greater than 0.
+        Fixed sorting by directly comparing priorities.
+
+    3. Currency Formatting:
+        Used 'toFixed(2)' to format amounts with two decimal places for better readability.
+
+    4. Component Rendering:
+        Ensured 'WalletRow' component is correctly rendered with the required props.
+        Improved code readability by simplifying the return statements.
+
+    5. Dependencies:
+        Ensured the dependency array of 'useMemo' only includes necessary dependencies ('balances').
